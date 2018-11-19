@@ -280,21 +280,6 @@ atomicTermParser =
         ]
 
 
-many : b -> (b -> a -> b) -> Parser a -> Parser b
-many init f parser =
-    let
-        manyHelp parserInner vs =
-            oneOf
-                [ succeed (\v -> Parser.Loop (f vs v))
-                    |= parserInner
-                    |. spaces
-                , succeed ()
-                    |> Parser.map (\_ -> Parser.Done vs)
-                ]
-    in
-    Parser.loop init (manyHelp parser)
-
-
 appTermParser : Parser Term
 appTermParser =
     let
