@@ -36,12 +36,14 @@ import Set
 
 ```text
 T ::= Atom
+    | Int
     | T1 -> T2
 ```
 
 -}
 type Type
     = AtomType
+    | IntType
     | Arrow Type Type
 
 
@@ -49,6 +51,7 @@ type Type
 
 ```text
 t ::= 'atom
+    | n
     | t : T
     | x
     | \x -> t
@@ -58,6 +61,7 @@ t ::= 'atom
 -}
 type Term
     = Atom String
+    | IntLiteral Int
     | Ann Term Type
     | Var String
     | Lam String Term
@@ -119,6 +123,9 @@ infer context term =
         Atom _ ->
             Ok AtomType
 
+        IntLiteral value ->
+            Ok IntType
+
         Ann annedTerm ty ->
             check context annedTerm ty
                 |> Result.map (always ty)
@@ -129,10 +136,10 @@ infer context term =
                     Ok ty
 
                 Nothing ->
-                    Err ("undefined variable `" ++ name ++ "`")
+                    Err ("undefined variable called `" ++ name ++ "`")
 
-        Lam _ _ ->
-            Err "lambda needs type annotation"
+        Lam paramName _ ->
+            Err ("lambda needs type annotation for the parameter called `" ++ paramName ++ "`")
 
         App fnTerm argTerm ->
             infer context fnTerm
@@ -194,6 +201,9 @@ tyToString ty =
         AtomType ->
             "Atom"
 
+        IntType ->
+            "Int"
+
         Arrow paramTy returnTy ->
             "(" ++ tyToString paramTy ++ " -> " ++ tyToString returnTy ++ ")"
 
@@ -205,6 +215,9 @@ termToString term =
     case term of
         Atom atom ->
             "'" ++ atom
+
+        IntLiteral value ->
+            String.fromInt value
 
         Ann annedTerm ty ->
             "(" ++ termToString annedTerm ++ " : " ++ tyToString ty ++ ")"
@@ -229,6 +242,16 @@ varParser =
         { start = Char.isAlpha
         , inner = Char.isAlphaNum
         , reserved = Set.fromList [ "Atom" ]
+        }
+
+intParser : Parser Int
+intParser =
+    Parser.number
+        { int = Just identity
+        , hex = Nothing
+        , octal = Nothing
+        , binary = Nothing
+        , float = Nothing
         }
 
 
@@ -269,6 +292,8 @@ atomicTermParser =
         [ succeed Atom
             |. symbol "'"
             |= varParser
+        , succeed IntLiteral
+            |= intParser
         , succeed Var
             |= varParser
         , succeed identity
@@ -376,6 +401,7 @@ view model =
         , ul []
             [ li [] [ pre [] [ text "'x" ] ]
             , li [] [ pre [] [ text "'x : Atom" ] ]
+            , li [] [ pre [] [ text "1" ] ]
             , li [] [ pre [] [ text "\\x => x : Atom -> Atom" ] ]
             , li [] [ pre [] [ text "(\\x => x : Atom -> Atom) 'x" ] ]
             , li [] [ pre [] [ text "(\\x => \\y => x : Atom -> Atom -> Atom) 'x" ] ]
