@@ -44,7 +44,7 @@ T ::= Atom
 type Type
     = AtomType
     | IntType
-    | Arrow Type Type
+    | FunType Type Type
 
 
 {-| Terms in the simply typed lambda calculus
@@ -108,7 +108,7 @@ exampleAlwaysHello =
 exampleAlways : Term
 exampleAlways =
     -- (\x _ -> x) : Atom -> Atom -> Atom
-    Ann (Lam "x" (Lam "_" (Var "x"))) (Arrow AtomType (Arrow AtomType AtomType))
+    Ann (Lam "x" (Lam "_" (Var "x"))) (FunType AtomType (FunType AtomType AtomType))
 
 
 
@@ -146,7 +146,7 @@ infer context term =
                 |> Result.andThen
                     (\ty ->
                         case ty of
-                            Arrow paramTy returnTy ->
+                            FunType paramTy returnTy ->
                                 check context argTerm paramTy
                                     |> Result.map (always returnTy)
 
@@ -164,7 +164,7 @@ infer context term =
 check : Context -> Term -> Type -> Result String ()
 check context term expectedTy =
     case ( term, expectedTy ) of
-        ( Lam paramName bodyTerm, Arrow paramTy returnTy ) ->
+        ( Lam paramName bodyTerm, FunType paramTy returnTy ) ->
             let
                 innerContext =
                     context |> extendContext paramName paramTy
@@ -204,7 +204,7 @@ tyToString ty =
         IntType ->
             "Int"
 
-        Arrow paramTy returnTy ->
+        FunType paramTy returnTy ->
             "(" ++ tyToString paramTy ++ " -> " ++ tyToString returnTy ++ ")"
 
 
@@ -274,7 +274,7 @@ tyParser =
     let
         tyHelp lhsTy =
             oneOf
-                [ succeed (Arrow lhsTy)
+                [ succeed (FunType lhsTy)
                     |. spaces
                     |. symbol "->"
                     |. spaces
