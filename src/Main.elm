@@ -241,7 +241,7 @@ varParser =
     Parser.variable
         { start = Char.isAlpha
         , inner = Char.isAlphaNum
-        , reserved = Set.fromList [ "Atom" ]
+        , reserved = Set.fromList [ "Atom", "Int" ]
         }
 
 intParser : Parser Int
@@ -260,6 +260,8 @@ atomicTyParser =
     oneOf
         [ succeed AtomType
             |. keyword "Atom"
+        , succeed IntType
+            |. keyword "Int"
         , succeed identity
             |. symbol "("
             |. spaces
