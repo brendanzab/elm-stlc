@@ -7,11 +7,11 @@ module STLC exposing
     , extendContext
     , infer
     , lookupContext
+    , nameParser
     , termParser
     , termToString
     , tyParser
     , tyToString
-    , varParser
     )
 
 import Dict exposing (Dict)
@@ -205,8 +205,8 @@ termToString term =
 -- PARSING
 
 
-varParser : Parser String
-varParser =
+nameParser : Parser String
+nameParser =
     Parser.variable
         { start = Char.isAlpha
         , inner = Char.isAlphaNum
@@ -263,11 +263,11 @@ atomicTermParser =
     oneOf
         [ succeed Atom
             |. symbol "'"
-            |= varParser
+            |= nameParser
         , succeed IntTerm
             |= intParser
         , succeed Local
-            |= varParser
+            |= nameParser
         , succeed identity
             |. symbol "("
             |. spaces
@@ -300,7 +300,7 @@ funTermParser =
         , succeed FunTerm
             |. symbol "\\"
             |. spaces
-            |= varParser
+            |= nameParser
             |. spaces
             |. symbol "=>"
             |. spaces
