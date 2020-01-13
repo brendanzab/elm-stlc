@@ -33,7 +33,7 @@ import STLC
 
 type alias Model =
     { src : String
-    , inferred : Maybe (Result String STLC.Type)
+    , inferred : Maybe (Result String ( STLC.Term, STLC.Type ))
     }
 
 
@@ -61,7 +61,11 @@ update msg model =
                     model.src
                         |> Parser.run (STLC.termParser |. Parser.spaces |. Parser.end)
                         |> Result.mapError Parser.deadEndsToString
-                        |> Result.andThen (STLC.infer STLC.emptyContext)
+                        |> Result.andThen
+                            (\term ->
+                                STLC.infer STLC.emptyContext term
+                                    |> Result.map (\ty -> ( term, ty ))
+                            )
             in
             { model | inferred = Just inferred }
 
@@ -89,8 +93,8 @@ view model =
                 Nothing ->
                     []
 
-                Just (Ok ty) ->
-                    [ text ("inferred: " ++ STLC.tyToString ty) ]
+                Just (Ok ( term, ty )) ->
+                    [ text (STLC.termToString term ++ " : " ++ STLC.tyToString ty) ]
 
                 Just (Err msg) ->
                     [ text ("😬 - " ++ msg) ]
