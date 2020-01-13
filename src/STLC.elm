@@ -52,11 +52,11 @@ t ::= 'atom
 -}
 type Term
     = Atom String
-    | IntLiteral Int
+    | IntTerm Int
     | Ann Term Type
-    | Var String
-    | Lam String Term
-    | App Term Term
+    | Local String
+    | FunTerm String Term
+    | FunElim Term Term
 
 
 {-| A context for remembering the types of variables during type checking
@@ -92,14 +92,14 @@ infer context term =
         Atom _ ->
             Ok AtomType
 
-        IntLiteral _ ->
+        IntTerm _ ->
             Ok IntType
 
         Ann annedTerm ty ->
             check context annedTerm ty
                 |> Result.map (always ty)
 
-        Var name ->
+        Local name ->
             case lookupContext name context of
                 Just ty ->
                     Ok ty
@@ -107,11 +107,11 @@ infer context term =
                 Nothing ->
                     Err ("undefined variable called `" ++ name ++ "`")
 
-        Lam paramName _ ->
+        FunTerm paramName _ ->
             Err ("lambda needs type annotation for the parameter called `" ++ paramName ++ "`")
 
-        App fnTerm argTerm ->
-            infer context fnTerm
+        FunElim headTerm argTerm ->
+            infer context headTerm
                 |> Result.andThen
                     (\ty ->
                         case ty of
@@ -133,7 +133,7 @@ infer context term =
 check : Context -> Term -> Type -> Result String ()
 check context term expectedTy =
     case ( term, expectedTy ) of
-        ( Lam paramName bodyTerm, FunType paramTy returnTy ) ->
+        ( FunTerm paramName bodyTerm, FunType paramTy returnTy ) ->
             let
                 innerContext =
                     context |> extendContext paramName paramTy
@@ -185,20 +185,20 @@ termToString term =
         Atom atom ->
             "'" ++ atom
 
-        IntLiteral value ->
+        IntTerm value ->
             String.fromInt value
 
         Ann annedTerm ty ->
             "(" ++ termToString annedTerm ++ " : " ++ tyToString ty ++ ")"
 
-        Var name ->
+        Local name ->
             name
 
-        Lam paramName body ->
+        FunTerm paramName body ->
             "(\\" ++ paramName ++ " => " ++ termToString body ++ ")"
 
-        App fnTerm argTerm ->
-            "(" ++ termToString fnTerm ++ " " ++ termToString argTerm ++ ")"
+        FunElim headTerm argTerm ->
+            "(" ++ termToString headTerm ++ " " ++ termToString argTerm ++ ")"
 
 
 
@@ -264,9 +264,9 @@ atomicTermParser =
         [ succeed Atom
             |. symbol "'"
             |= varParser
-        , succeed IntLiteral
+        , succeed IntTerm
             |= intParser
-        , succeed Var
+        , succeed Local
             |= varParser
         , succeed identity
             |. symbol "("
@@ -277,12 +277,12 @@ atomicTermParser =
         ]
 
 
-appTermParser : Parser Term
-appTermParser =
+funElimParser : Parser Term
+funElimParser =
     let
         termHelp appTerms =
             oneOf
-                [ succeed (\argTerm -> Parser.Loop (App appTerms argTerm))
+                [ succeed (\argTerm -> Parser.Loop (FunElim appTerms argTerm))
                     |. spaces
                     |= atomicTermParser
                 , succeed ()
@@ -293,18 +293,18 @@ appTermParser =
         |> Parser.andThen (\term -> Parser.loop term termHelp)
 
 
-lamTermParser : Parser Term
-lamTermParser =
+funTermParser : Parser Term
+funTermParser =
     oneOf
-        [ appTermParser
-        , succeed Lam
+        [ funElimParser
+        , succeed FunTerm
             |. symbol "\\"
             |. spaces
             |= varParser
             |. spaces
             |. symbol "=>"
             |. spaces
-            |= lazy (\_ -> lamTermParser)
+            |= lazy (\_ -> funTermParser)
         ]
 
 
@@ -322,4 +322,4 @@ termParser =
                 , succeed lhsTerm
                 ]
     in
-    lamTermParser |> Parser.andThen termHelp
+    funTermParser |> Parser.andThen termHelp
