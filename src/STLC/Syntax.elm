@@ -1,26 +1,14 @@
-module STLC exposing
-    ( Context
-    , Term(..)
+module STLC.Syntax exposing
+    ( Term(..)
     , Type(..)
-    , check
-    , emptyContext
-    , extendContext
-    , infer
-    , lookupContext
-    , nameParser
     , termParser
     , termToString
     , tyParser
     , tyToString
     )
 
-import Dict exposing (Dict)
 import Parser exposing ((|.), (|=), Parser, keyword, lazy, oneOf, spaces, succeed, symbol)
 import Set
-
-
-
--- SYNTAX
 
 
 {-| Types in the simply typed lambda calculus
@@ -57,105 +45,6 @@ type Term
     | Local String
     | FunTerm String Term
     | FunElim Term Term
-
-
-{-| A context for remembering the types of variables during type checking
--}
-type alias Context =
-    Dict String Type
-
-
-emptyContext : Context
-emptyContext =
-    Dict.empty
-
-
-lookupContext : String -> Context -> Maybe Type
-lookupContext =
-    Dict.get
-
-
-extendContext : String -> Type -> Context -> Context
-extendContext =
-    Dict.insert
-
-
-
--- TYPE CHECKING
-
-
-{-| Infer the type of a term in a context
--}
-infer : Context -> Term -> Result String Type
-infer context term =
-    case term of
-        Atom _ ->
-            Ok AtomType
-
-        IntTerm _ ->
-            Ok IntType
-
-        Ann annedTerm ty ->
-            check context annedTerm ty
-                |> Result.map (always ty)
-
-        Local name ->
-            case lookupContext name context of
-                Just ty ->
-                    Ok ty
-
-                Nothing ->
-                    Err ("undefined variable called `" ++ name ++ "`")
-
-        FunTerm paramName _ ->
-            Err ("lambda needs type annotation for the parameter called `" ++ paramName ++ "`")
-
-        FunElim headTerm argTerm ->
-            infer context headTerm
-                |> Result.andThen
-                    (\ty ->
-                        case ty of
-                            FunType paramTy returnTy ->
-                                check context argTerm paramTy
-                                    |> Result.map (always returnTy)
-
-                            fnTy ->
-                                Err
-                                    ("expected function type, found `"
-                                        ++ tyToString fnTy
-                                        ++ "`"
-                                    )
-                    )
-
-
-{-| Check that a term conforms to a given type with respect to a context
--}
-check : Context -> Term -> Type -> Result String ()
-check context term expectedTy =
-    case ( term, expectedTy ) of
-        ( FunTerm paramName bodyTerm, FunType paramTy returnTy ) ->
-            let
-                innerContext =
-                    context |> extendContext paramName paramTy
-            in
-            check innerContext bodyTerm returnTy
-
-        ( _, _ ) ->
-            infer context term
-                |> Result.andThen
-                    (\inferredTy ->
-                        if inferredTy == expectedTy then
-                            Ok ()
-
-                        else
-                            Err
-                                ("type mismatch, expected `"
-                                    ++ tyToString expectedTy
-                                    ++ "` but found `"
-                                    ++ tyToString inferredTy
-                                    ++ "`"
-                                )
-                    )
 
 
 

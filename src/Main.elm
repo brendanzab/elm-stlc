@@ -23,8 +23,9 @@ Further reading:
 import Browser
 import Html exposing (Html, button, div, h1, input, li, p, pre, text, ul)
 import Html.Events exposing (onClick, onInput)
-import Parser exposing ((|.))
-import STLC
+import Parser exposing ((|.), (|=))
+import STLC.Syntax as Syntax
+import STLC.Typing as Typing
 
 
 
@@ -32,14 +33,16 @@ import STLC
 
 
 type alias Model =
-    { src : String
-    , inferred : Maybe (Result String ( STLC.Term, STLC.Type ))
+    { typingContext : Typing.Context
+    , src : String
+    , inferred : Maybe (Result String ( Syntax.Term, Syntax.Type ))
     }
 
 
 initialModel : Model
 initialModel =
-    { src = ""
+    { typingContext = Typing.emptyContext
+    , src = ""
     , inferred = Nothing
     }
 
@@ -57,13 +60,20 @@ update msg model =
 
         TypeCheck ->
             let
+                parser =
+                    Parser.succeed identity
+                        |. Parser.spaces
+                        |= Syntax.termParser
+                        |. Parser.spaces
+                        |. Parser.end
+
                 inferred =
                     model.src
-                        |> Parser.run (STLC.termParser |. Parser.spaces |. Parser.end)
+                        |> Parser.run parser
                         |> Result.mapError Parser.deadEndsToString
                         |> Result.andThen
                             (\term ->
-                                STLC.infer STLC.emptyContext term
+                                Typing.infer model.typingContext term
                                     |> Result.map (\ty -> ( term, ty ))
                             )
             in
@@ -94,7 +104,7 @@ view model =
                     []
 
                 Just (Ok ( term, ty )) ->
-                    [ text (STLC.termToString term ++ " : " ++ STLC.tyToString ty) ]
+                    [ text (Syntax.termToString term ++ " : " ++ Syntax.tyToString ty) ]
 
                 Just (Err msg) ->
                     [ text ("😬 - " ++ msg) ]
