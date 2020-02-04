@@ -37,12 +37,6 @@ extendContext =
 infer : Context -> Syntax.Term -> Result String Syntax.Type
 infer context term =
     case term of
-        Syntax.AtomTerm _ ->
-            Ok Syntax.AtomType
-
-        Syntax.IntTerm _ ->
-            Ok Syntax.IntType
-
         Syntax.Ann annedTerm ty ->
             check context annedTerm ty
                 |> Result.map (always ty)
@@ -54,6 +48,12 @@ infer context term =
 
                 Nothing ->
                     Err ("undefined variable called `" ++ name ++ "`")
+
+        Syntax.AtomTerm _ ->
+            Ok Syntax.AtomType
+
+        Syntax.IntTerm _ ->
+            Ok Syntax.IntType
 
         Syntax.FunTerm paramName _ ->
             Err ("lambda needs type annotation for the parameter called `" ++ paramName ++ "`")

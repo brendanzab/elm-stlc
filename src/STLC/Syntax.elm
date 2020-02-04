@@ -39,10 +39,10 @@ t ::= 'atom
 
 -}
 type Term
-    = AtomTerm String
-    | IntTerm Int
-    | Ann Term Type
+    = Ann Term Type
     | Local String
+    | AtomTerm String
+    | IntTerm Int
     | FunTerm String Term
     | FunElim Term Term
 
@@ -71,17 +71,17 @@ tyToString ty =
 termToString : Term -> String
 termToString term =
     case term of
-        AtomTerm atom ->
-            "'" ++ atom
-
-        IntTerm value ->
-            String.fromInt value
-
         Ann annedTerm ty ->
             "(" ++ termToString annedTerm ++ " : " ++ tyToString ty ++ ")"
 
         Local name ->
             name
+
+        AtomTerm atom ->
+            "'" ++ atom
+
+        IntTerm value ->
+            String.fromInt value
 
         FunTerm paramName body ->
             "(\\" ++ paramName ++ " => " ++ termToString body ++ ")"

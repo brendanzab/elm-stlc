@@ -22,11 +22,10 @@ t ::= 'atom
 
 -}
 type Value
-    = AtomTerm String
+    = Elim Head (List Elim)
+    | AtomTerm String
     | IntTerm Int
-    | Elim Head (List Elim)
     | FunTerm Closure
-    | FunElim Value Value
 
 
 type alias Closure =
