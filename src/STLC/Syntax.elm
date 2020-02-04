@@ -39,7 +39,7 @@ t ::= 'atom
 
 -}
 type Term
-    = Atom String
+    = AtomTerm String
     | IntTerm Int
     | Ann Term Type
     | Local String
@@ -71,7 +71,7 @@ tyToString ty =
 termToString : Term -> String
 termToString term =
     case term of
-        Atom atom ->
+        AtomTerm atom ->
             "'" ++ atom
 
         IntTerm value ->
@@ -150,7 +150,7 @@ tyParser =
 atomicTermParser : Parser Term
 atomicTermParser =
     oneOf
-        [ succeed Atom
+        [ succeed AtomTerm
             |. symbol "'"
             |= nameParser
         , succeed IntTerm

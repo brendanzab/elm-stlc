@@ -22,7 +22,7 @@ t ::= 'atom
 
 -}
 type Value
-    = Atom String
+    = AtomTerm String
     | IntTerm Int
     | Elim Head (List Elim)
     | FunTerm Closure

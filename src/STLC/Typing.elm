@@ -37,7 +37,7 @@ extendContext =
 infer : Context -> Syntax.Term -> Result String Syntax.Type
 infer context term =
     case term of
-        Syntax.Atom _ ->
+        Syntax.AtomTerm _ ->
             Ok Syntax.AtomType
 
         Syntax.IntTerm _ ->
